@@ -15,6 +15,7 @@ dependencies = [
   "scipy",
   "pandas",
   "httpx",
+  "openai",
   "python-multipart",
   "python-dotenv",
 ]
