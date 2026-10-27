@@ -126,9 +126,9 @@ def get_recommendation(ctx: ShopContext, horizon_days: int = 14) -> dict:
                 hit = i
                 break
         if hit is not None:
-            mc = ctx.cash_ksh if hit == 0 else rows[hit - 1]["mean_cash_ksh"]
-            mf = ctx.float_ksh if hit == 0 else rows[hit - 1]["mean_float_ksh"]
-            add_c, add_f = _clamp_add(rows[hit]["top_option"], mc, mf)
+            # Without an earlier restock, cash + float is conserved, so the free
+            # room is exact: capacity minus what the shop holds today.
+            add_c, add_f = _clamp_add(rows[hit]["top_option"], ctx.cash_ksh, ctx.float_ksh)
             restock = _restock(ctx.today + timedelta(days=hit), hit, add_c, add_f,
                                risk[hit - 1] if hit > 0 else 0.0, rows[hit]["p_restock"])
             if restock is not None:
@@ -187,8 +187,11 @@ def run_whatif(ctx: ShopContext, market_day: str | None = None,
         name = market_day.strip().lower()
         if name not in DAY_NAMES:
             raise ValueError(f"unknown day: {market_day}")
-        demand = replace(demand, market_days=tuple(sorted(set(demand.market_days) | {name})))
-        changed.append(f"{name} treated as a market day")
+        if name in demand.market_days:
+            changed.append(f"{name} is already a market day, so nothing changes")
+        else:
+            demand = replace(demand, market_days=tuple(sorted(set(demand.market_days) | {name})))
+            changed.append(f"{name} treated as a market day")
     if demand_multiplier is not None:
         demand = replace(demand, demand_multiplier=demand.demand_multiplier * demand_multiplier)
         changed.append(f"overall demand x{demand_multiplier}")
