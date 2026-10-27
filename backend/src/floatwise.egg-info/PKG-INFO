@@ -10,6 +10,7 @@ Requires-Dist: numpy
 Requires-Dist: scipy
 Requires-Dist: pandas
 Requires-Dist: httpx
+Requires-Dist: openai
 Requires-Dist: python-multipart
 Requires-Dist: python-dotenv
 Provides-Extra: dev

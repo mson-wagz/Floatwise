@@ -1,0 +1,8 @@
+
+backend/.env
+temp_auto_push.bat
+
+__pycache__/
+*.pyc
+.gitignore
+branch_structure.json
