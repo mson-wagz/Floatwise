@@ -1,32 +1,24 @@
-from hashlib import sha256
+from __future__ import annotations
 
-def anonymize_data(data):
-    """
-    Anonymizes sensitive information in the provided data.
+import hashlib
+import re
 
-    Args:
-        data (dict): A dictionary containing sensitive information such as
-                     'phone_number' and 'name'.
+_PHONE = re.compile(r"(?<!\d)(?:\+?254|0)[17]\d{8}(?!\d)")
+_NAME = re.compile(r"\b(from|to)\s+[A-Z][A-Za-z .'\-]*?\s+\[PHONE\]")
 
-    Returns:
-        dict: A new dictionary with anonymized values.
-    """
-    anonymized_data = data.copy()
-    
-    if 'phone_number' in anonymized_data:
-        anonymized_data['phone_number'] = sha256(anonymized_data['phone_number'].encode()).hexdigest()
-    
-    if 'name' in anonymized_data:
-        anonymized_data['name'] = sha256(anonymized_data['name'].encode()).hexdigest()
-    
-    return anonymized_data
 
-# Example usage
-if __name__ == "__main__":
-    sample_data = {
-        'phone_number': '1234567890',
-        'name': 'John Doe'
-    }
-    
-    anonymized = anonymize_data(sample_data)
-    print(anonymized)  # Output will show hashed values for phone_number and name
+def normalize_phone(raw: str) -> str:
+    digits = re.sub(r"\D", "", raw)
+    return "254" + digits[1:] if digits.startswith("0") else digits
+
+
+def hash_phone(raw: str, salt: str = "floatwise-demo") -> str:
+    """Stable pseudonym for a customer. The default salt is for the demo only;
+    use a secret salt before touching real data."""
+    return hashlib.sha256((salt + normalize_phone(raw)).encode()).hexdigest()[:10]
+
+
+def redact(text: str) -> str:
+    """Remove phone numbers and the names next to them (used before any model call)."""
+    text = _PHONE.sub("[PHONE]", text)
+    return _NAME.sub(lambda m: f"{m.group(1)} [NAME] [PHONE]", text)
