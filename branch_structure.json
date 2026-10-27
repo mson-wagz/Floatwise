@@ -1,0 +1,18 @@
+{
+  "default_branch": "main",
+  "branches": [
+    "React-Branch",
+    "agent-pipeline",
+    "main"
+  ],
+  "parent": {
+    "React-Branch": "main",
+    "agent-pipeline": "main",
+    "main": null
+  },
+  "order": [
+    "main",
+    "React-Branch",
+    "agent-pipeline"
+  ]
+}
