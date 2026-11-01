@@ -1,0 +1,82 @@
+{
+  "app_title": "FloatWise",
+  "app_tagline": "Usiwahi kuishiwa na pesa taslimu au float ya M-Pesa",
+  "nav": {
+    "advisor": "Msaidizi",
+    "add_data": "Ingiza Data",
+    "forecast": "Utabiri",
+    "what_if": "Vipi Ikiwa?",
+    "replay": "Hasara za Nyuma",
+    "float_swap": "Badilishana Float"
+  },
+  "balances": {
+    "cash_drawer": "Pesa Taslimu Drooni",
+    "phone_float": "Salio la Simu (M-Pesa)",
+    "total_capital": "Jumla ya Mtaji",
+    "update_balances": "Rekebisha Salio",
+    "save": "Hifadhi Salio"
+  },
+  "privacy": {
+    "badge": "Ulinzi wa Faragha Upo Kazini",
+    "tooltip": "Majina ya wateja na nambari zao za simu huondolewa hapa kwenye kifaa chako kabla ya uchambuzi wowote."
+  },
+  "advisor": {
+    "input_placeholder": "Uliza kwa Kiswahili au Kiingereza (mfano 'vipi ikiwa karo za shule ni Alhamisi?')...",
+    "send": "Uliza",
+    "listen": "Sikiliza kwa Sauti",
+    "speaking": "Inasoma...",
+    "stop": "Simamisha Sauti",
+    "verified_badge": "Imehesabiwa kihisabati. Hakuna nambari zilizotungwa.",
+    "quick_chips": [
+      "Vipi ikiwa karo za shule zinalipwa Alhamisi?",
+      "Nahitaji pesa ngapi taslimu kwa soko la Jumamosi?",
+      "Kuna hatari gani ya kuishiwa wiki hii?",
+      "Kwa nini float ya simu inaisha haraka kuliko pesa taslimu?"
+    ]
+  },
+  "ingest": {
+    "title": "Ingiza Shughuli za Leo",
+    "subtitle": "Sema kwa sauti, weka ujumbe wa SMS ya M-Pesa, au piga picha daftari lako.",
+    "tab_voice": "Sauti (Voice Note)",
+    "tab_sms": "Weka SMS za M-Pesa",
+    "tab_ledger": "Picha ya Daftari",
+    "voice_record_prompt": "Bonyeza kusema kwa Kiswahili au Kiingereza",
+    "voice_recording": "Inasikiliza unachosema...",
+    "stop_recording": "Nimemaliza Kusema",
+    "sms_placeholder": "Bandika meseji za M-Pesa hapa moja kwa moja...",
+    "parse_button": "Chambua & Kagua Miamala",
+    "review_title": "Kagua Kwanza Kabla ya Kuhifadhi",
+    "review_subtitle": "Hakuna kinachohifadhiwa hadi ukague na ukubali.",
+    "confirm_button": "Kubali & Rekebisha Droo",
+    "reject_button": "Futa Kundi Hili",
+    "sample_voice": "Jaribu Sampuli ya Sauti",
+    "sample_sms": "Weka Mfano wa Meseji ya M-Pesa"
+  },
+  "what_if": {
+    "title": "Uchambuzi wa 'Vipi Ikiwa?'",
+    "subtitle": "Angalia jinsi siku za soko, mshahara au karo za shule zitakavyoathiri float yako.",
+    "market_day_label": "Siku ya Soko",
+    "demand_slider": "Kiwango cha Wateja (Multiplier)",
+    "event_label": "Tukio Maalum (Mfano Karo za Shule)",
+    "calculate": "Hesabu Tena",
+    "baseline": "Hali ya Kawaida",
+    "scenario": "Hali Uliyochagua",
+    "impact": "Athari Zake"
+  },
+  "replay": {
+    "title": "Hasara za Mwezi Uliopita",
+    "subtitle": "Gharama ya wateja waliorejea bila huduma kwa sababu ya kuishiwa na pesa au float.",
+    "lost_commissions": "Kamisheni Zilizopotea",
+    "missed_volume": "Kiasi cha Miamala Iliyopita",
+    "turned_away_customers": "Wateja Waliokataliwa",
+    "breakdown_title": "Orodha ya Matukio ya Kuishiwa"
+  },
+  "swap": {
+    "title": "FloatSwap: Badilishana na Maduka ya Karibu",
+    "subtitle": "Badilishana pesa taslimu na float na maduka ya kuaminika yaliyo karibu nawe.",
+    "propose_swap": "Omba Kubadilishana",
+    "surplus_cash": "Ana Pesa Taslimu Ziada (Anahitaji Float)",
+    "surplus_float": "Ana Float ya Simu Ziada (Anahitaji Pesa)",
+    "balanced": "Yuko Sawa"
+  }
+}

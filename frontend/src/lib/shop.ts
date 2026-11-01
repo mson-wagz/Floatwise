@@ -1,2 +1,9 @@
-//This is a hardcoded demo shop
-export const useShopId = () => "shop_1";
+import { LocalStore } from "./store";
+
+export const useShopId = () => {
+  return LocalStore.getShop().shop_id;
+};
+
+export const getActiveShop = () => {
+  return LocalStore.getShop();
+};
