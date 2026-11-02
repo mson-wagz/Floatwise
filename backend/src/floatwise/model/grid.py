@@ -32,8 +32,13 @@ def build_state_space(cap: int = MAX_TOTAL_UNITS) -> StateSpace:
 
 
 def apply_restock(cash, flt, add_cash, add_float, cap: int = MAX_TOTAL_UNITS):
-    """Add cash and/or float, clamped so cash + float <= cap. Works on arrays."""
+    """Add cash and/or float, clamped so cash + float <= cap. Works on arrays.
+    A negative amount is a sale to the bank: it removes up to the balance held."""
+    sell_c = np.minimum(np.maximum(-add_cash, 0), cash)
+    sell_f = np.minimum(np.maximum(-add_float, 0), flt)
+    cash = cash - sell_c
+    flt = flt - sell_f
     room = cap - (cash + flt)
-    add_cash = np.minimum(np.maximum(add_cash, 0), room)
-    add_float = np.minimum(np.maximum(add_float, 0), room - add_cash)
-    return cash + add_cash, flt + add_float
+    add_c = np.minimum(np.maximum(add_cash, 0), room)
+    add_f = np.minimum(np.maximum(add_float, 0), room - add_c)
+    return cash + add_c, flt + add_f

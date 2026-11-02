@@ -33,6 +33,8 @@ def system_prompt(ctx: ShopContext, language: str) -> str:
         "is turned away.\n"
         "5. If the recommendation has no restock, say none is needed within the horizon.\n"
         "6. For what-if questions use run_whatif and compare scenario with baseline.\n"
+        "7. For questions about past losses or missed income use replay_month, and say "
+        "clearly that the figure is an estimate.\n"
         f"Today is {ctx.today.strftime('%A %Y-%m-%d')}. The shop holds KSh "
         f"{ctx.cash_ksh:,} cash and KSh {ctx.float_ksh:,} e-float.")
 
@@ -83,22 +85,31 @@ def fallback_text(results: list, language: str) -> str | None:
             return None
         return (f"No restock is needed in the next {h} days." if language == "en"
                 else f"Hakuna haja ya kuongeza pesa katika siku {h} zijazo.")
-    parts_en, parts_sw = [], []
+    add_en, add_sw, bank_en, bank_sw = [], [], [], []
     if r["add_cash_ksh"]:
-        parts_en.append(f"KSh {r['add_cash_ksh']:,} cash")
-        parts_sw.append(f"pesa taslimu KSh {r['add_cash_ksh']:,}")
+        add_en.append(f"KSh {r['add_cash_ksh']:,} cash")
+        add_sw.append(f"pesa taslimu KSh {r['add_cash_ksh']:,}")
     if r["add_float_ksh"]:
-        parts_en.append(f"KSh {r['add_float_ksh']:,} float")
-        parts_sw.append(f"float KSh {r['add_float_ksh']:,}")
-    amount_en, amount_sw = " and ".join(parts_en), " na ".join(parts_sw)
+        add_en.append(f"KSh {r['add_float_ksh']:,} float")
+        add_sw.append(f"float KSh {r['add_float_ksh']:,}")
+    if r.get("bank_cash_ksh"):
+        bank_en.append(f"KSh {r['bank_cash_ksh']:,} of excess cash")
+        bank_sw.append(f"pesa taslimu ya ziada KSh {r['bank_cash_ksh']:,}")
+    if r.get("bank_float_ksh"):
+        bank_en.append(f"KSh {r['bank_float_ksh']:,} of excess float")
+        bank_sw.append(f"float ya ziada KSh {r['bank_float_ksh']:,}")
+    if add_en:
+        act_en, act_sw = "Restock " + " and ".join(add_en), "Ongeza " + " na ".join(add_sw)
+    else:
+        act_en = "Move " + " and ".join(bank_en) + " to your bank"
+        act_sw = "Peleka benki " + " na ".join(bank_sw)
     pct = round(r["p_stockout_before"] * 100)
     if r["day_index"] == 0:
-        return (f"Restock {amount_en} today." if language == "en"
-                else f"Ongeza {amount_sw} leo.")
+        return f"{act_en} today." if language == "en" else f"{act_sw} leo."
     if language == "en":
-        return (f"Restock {amount_en} by {r['weekday']} ({r['date']}). Until then there is "
-                f"about a {pct}% chance that at least one customer is turned away.")
-    return (f"Ongeza {amount_sw} kufikia {_SW_DAYS.get(r['weekday'], r['weekday'])} "
+        return (f"{act_en} by {r['weekday']} ({r['date']}). Until then there is about a "
+                f"{pct}% chance that at least one customer is turned away.")
+    return (f"{act_sw} kufikia {_SW_DAYS.get(r['weekday'], r['weekday'])} "
             f"({r['date']}). Hadi wakati huo kuna uwezekano wa takriban {pct}% kwamba "
             f"angalau mteja mmoja atakosa huduma.")
 

@@ -1,20 +1,45 @@
-import { useState } from "react";
-import { LocalStore } from "../lib/store";
-import { ksh } from "../lib/format";
-import type { PeerShop } from "../lib/store";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { api } from "../api/client"; // Ensure this is your API client
+import { ksh } from "../lib/format";
+import type { PeerShop, Shop } from "../lib/store";
 
 export default function MatchesPage() {
   const { t } = useTranslation();
-  const [shop] = useState(LocalStore.getShop());
-  const [peers] = useState(LocalStore.getPeers());
+  const [shop, setShop] = useState<Shop | null>(null);
+  const [peers, setPeers] = useState<PeerShop[]>([]);
   const [activeModalPeer, setActiveModalPeer] = useState<PeerShop | null>(null);
   const [swapAmount, setSwapAmount] = useState<number>(20000);
   const [swapConfirmed, setSwapConfirmed] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch shop and peer data from the backend
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+
+        // Fetch shop data
+        const shopData = await api("/api/shops/shop_mama_stacy"); // Replace with the actual shop ID
+        setShop(shopData);
+
+        // Fetch peer shops data
+        const peerData = await api("/api/shops/shop_mama_stacy/peers"); // Replace with the actual shop ID
+        setPeers(peerData);
+
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   // Analyze current shop's need
-  const isCashLow = shop.cash_ksh < 35000;
-  const isFloatLow = shop.float_ksh < 35000;
+  const isCashLow = shop?.cash_ksh < 35000;
+  const isFloatLow = shop?.float_ksh < 35000;
 
   const handleProposeSwap = (peer: PeerShop) => {
     setActiveModalPeer(peer);
@@ -27,13 +52,52 @@ export default function MatchesPage() {
     }
   };
 
-  const handleCompleteSwap = () => {
-    setSwapConfirmed(true);
-    setTimeout(() => {
-      setActiveModalPeer(null);
-      setSwapConfirmed(false);
-    }, 2500);
+  const handleCompleteSwap = async () => {
+    try {
+      // Send swap request to the backend
+      await api(`/api/shops/${shop?.shop_id}/batches/swap`, {
+        method: "POST",
+        body: JSON.stringify({
+          peer_id: activeModalPeer?.id,
+          amount_ksh: swapAmount,
+        }),
+      });
+
+      setSwapConfirmed(true);
+      setTimeout(() => {
+        setActiveModalPeer(null);
+        setSwapConfirmed(false);
+      }, 2500);
+    } catch (error) {
+      console.error("Error completing swap:", error);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="max-w-5xl mx-auto space-y-6">
+        <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
+          {t("swap.title")}
+        </h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          {t("swap.loading")}
+        </p>
+      </div>
+    );
+  }
+
+  if (!shop) {
+    return (
+      <div className="max-w-5xl mx-auto space-y-6">
+        <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
+          {t("swap.title")}
+        </h1>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          {t("swap.no_shop")}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -150,86 +214,6 @@ export default function MatchesPage() {
           );
         })}
       </div>
-
-      {/* Peer Swap Coordination Modal */}
-      {activeModalPeer && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-5">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-xs uppercase font-bold text-emerald-600">FloatSwap Coordinator</span>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
-                  Swap with {activeModalPeer.name}
-                </h3>
-              </div>
-              <button
-                onClick={() => setActiveModalPeer(null)}
-                className="text-slate-400 hover:text-slate-600 text-lg font-bold"
-              >
-                ✕
-              </button>
-            </div>
-
-            {swapConfirmed ? (
-              <div className="p-6 text-center space-y-3 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl border border-emerald-300 dark:border-emerald-700">
-                <span className="text-4xl">🎉</span>
-                <h4 className="font-bold text-emerald-900 dark:text-emerald-200">
-                  Swap Proposed & Token Generated!
-                </h4>
-                <p className="text-xs text-emerald-800 dark:text-emerald-300">
-                  A verification SMS token has been sent to both shops. Meet at {activeModalPeer.location} to exchange.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4 text-xs">
-                <div>
-                  <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Amount to Swap (KSh)
-                  </label>
-                  <input
-                    type="number"
-                    step="1000"
-                    value={swapAmount}
-                    onChange={(e) => setSwapAmount(Number(e.target.value))}
-                    className="w-full text-base font-bold font-mono px-3 py-2 border border-slate-300 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800"
-                  />
-                  <span className="text-[11px] text-slate-500 mt-1 block">
-                    {activeModalPeer.status === "surplus_cash"
-                      ? `You receive ${ksh(swapAmount)} cash notes and transfer ${ksh(swapAmount)} M-Pesa float.`
-                      : `You hand over ${ksh(swapAmount)} cash notes and receive ${ksh(swapAmount)} M-Pesa float.`}
-                  </span>
-                </div>
-
-                <div className="p-3 bg-slate-50 dark:bg-slate-800/70 rounded-xl border border-slate-200 dark:border-slate-700 space-y-1.5">
-                  <span className="font-bold text-slate-800 dark:text-slate-200">
-                    Safe Agent-to-Agent Protocol:
-                  </span>
-                  <ul className="list-disc pl-4 space-y-1 text-slate-600 dark:text-slate-400">
-                    <li>Zero M-Pesa tariff fee for verified agent balance swaps.</li>
-                    <li>Walk only within daylight hours to {activeModalPeer.distance_m}m location.</li>
-                    <li>Verify cash counting before entering PIN on agent phone.</li>
-                  </ul>
-                </div>
-
-                <div className="flex items-center justify-end gap-2 pt-2">
-                  <button
-                    onClick={() => setActiveModalPeer(null)}
-                    className="px-4 py-2 rounded-xl border border-slate-200 text-slate-600"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleCompleteSwap}
-                    className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-sm"
-                  >
-                    Send Swap Request
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

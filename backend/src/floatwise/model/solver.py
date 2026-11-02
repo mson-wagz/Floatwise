@@ -19,7 +19,10 @@ class RestockOption:
 
 
 # Index 0 is (0, 0) = wait. Ties always resolve to waiting.
-DEFAULT_MENU = tuple(RestockOption(c, f) for c in (0, 20, 50, 100) for f in (0, 20, 50, 100))
+DEFAULT_MENU = tuple(RestockOption(c, f) for c in (0, 20, 50, 100)
+                     for f in (0, 20, 50, 100)) + (
+    RestockOption(-20, 0), RestockOption(-50, 0),     # pay excess cash into the bank
+    RestockOption(0, -20), RestockOption(0, -50))     # move excess float to the bank
 
 
 @dataclass(eq=False)
