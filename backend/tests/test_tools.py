@@ -1,14 +1,17 @@
 import json
 from datetime import date
-
 import pytest
+import numpy as np
 
+from floatwise.model.costs import RestockCosts
+from floatwise.model.tools import _clamp_sell
 from floatwise.model.demand import ShopDemand
 from floatwise.model.fit import fit_demand
 from floatwise.model.solver import RestockOption
 from floatwise.model.tools import (ShopContext, _clamp_add, get_forecast,
                                    get_recommendation, run_whatif)
 from floatwise.synthetic import SynthProfile, generate
+
 
 TODAY = date(2026, 10, 27)
 
@@ -69,3 +72,12 @@ def test_whatif_higher_demand_raises_risk():
 def test_whatif_rejects_a_bad_day_name():
     with pytest.raises(ValueError):
         run_whatif(_ctx(40_000, 40_000), market_day="funday", horizon_days=3)
+
+
+def test_bank_moves_are_clamped_to_what_is_held():
+    assert _clamp_sell(RestockOption(0, -50), 40_000, 30_000) == (0, 30_000)
+    assert _clamp_sell(RestockOption(-20, 0), 40_000, 30_000) == (20_000, 0)
+
+
+def test_banking_excess_has_a_trip_cost():
+    assert float(RestockCosts().cost(np.array([-5]), np.array([0]))[0]) == 300.0

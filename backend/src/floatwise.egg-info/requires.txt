@@ -9,6 +9,9 @@ httpx
 openai
 python-multipart
 python-dotenv
+supabase
+bcrypt
+python-jose
 
 [dev]
 pytest

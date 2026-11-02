@@ -24,6 +24,7 @@ class ShopContext:
     today: date
     costs: RestockCosts = field(default_factory=RestockCosts)
     churn_cost_ksh: float = 150.0   # ASSUMPTION: cost of each customer turned away
+    transactions: list = field(default_factory=list)   # the shop's confirmed history
 
 
 # ---- caches: building the model and solving take seconds, so reuse them ----
@@ -75,17 +76,31 @@ def _clamp_add(opt: RestockOption, cash_ksh: float, float_ksh: float) -> tuple[i
     c = int(round(cash_ksh / UNIT_KSH))
     f = int(round(float_ksh / UNIT_KSH))
     room = max(MAX_TOTAL_UNITS - (c + f), 0)
-    add_c = min(opt.cash_units, room)
-    add_f = min(opt.float_units, room - add_c)
+    add_c = min(max(opt.cash_units, 0), room)
+    add_f = min(max(opt.float_units, 0), room - add_c)
     return add_c * UNIT_KSH, add_f * UNIT_KSH
 
 
-def _restock(day: date, idx: int, add_c: int, add_f: int, p_before: float, p_plan: float):
-    if add_c + add_f == 0:
+def _clamp_sell(opt: RestockOption, cash_ksh: float, float_ksh: float) -> tuple[int, int]:
+    """Amounts (KSh) paid into the bank: never more than the shop holds."""
+    c = int(round(cash_ksh / UNIT_KSH))
+    f = int(round(float_ksh / UNIT_KSH))
+    return (min(max(-opt.cash_units, 0), c) * UNIT_KSH,
+            min(max(-opt.float_units, 0), f) * UNIT_KSH)
+
+
+def _restock(day: date, idx: int, add_c: int, add_f: int, bank_c: int, bank_f: int,
+             p_before: float, p_plan: float):
+    if not (add_c or add_f or bank_c or bank_f):
         return None
-    kind = "both" if add_c and add_f else ("cash" if add_c else "float")
+    if bank_c or bank_f:
+        kind = ("bank_cash" if bank_c and not bank_f
+                else "bank_float" if bank_f and not bank_c else "bank_both")
+    else:
+        kind = "both" if add_c and add_f else ("cash" if add_c else "float")
     return {"date": day.isoformat(), "weekday": day.strftime("%A"), "day_index": idx,
             "kind": kind, "add_cash_ksh": int(add_c), "add_float_ksh": int(add_f),
+            "bank_cash_ksh": int(bank_c), "bank_float_ksh": int(bank_f),
             "p_stockout_before": round(float(p_before), 4),
             "p_plan_restocks_this_day": round(float(p_plan), 4)}
 
@@ -98,12 +113,12 @@ def _quantile_ksh(pmf: np.ndarray, q: float) -> int:
 
 # ---- the tools the agent will call ----
 def get_recommendation(ctx: ShopContext, horizon_days: int = 14) -> dict:
-    """When and how much to restock, from the exact optimal plan.
+    """When and how much to restock (or pay into the bank), from the exact optimal plan.
 
-    If the plan says to restock this morning, the answer uses the REAL balances.
-    Otherwise the restock day is the first morning by which the plan has probably
-    already restocked at least once (cumulative probability >= 50%), and the amount
-    is the plan's usual choice that day, clamped to the room that is free.
+    If the plan says to act this morning, the answer uses the REAL balances. Otherwise the
+    day is the first morning by which the plan has probably already acted at least once
+    (cumulative probability >= 50%), and amounts are clamped to the room that is free and
+    to what the shop holds today.
     """
     c0, f0 = _units(ctx)
     plan = _plan(ctx.demand, ctx.costs, ctx.churn_cost_ksh, ctx.today, horizon_days)
@@ -111,11 +126,15 @@ def get_recommendation(ctx: ShopContext, horizon_days: int = 14) -> dict:
     risk = p_stockout_no_restock(plan.model, ctx.demand, ctx.today, horizon_days, c0, f0)
     rows = trace(plan, c0, f0)
 
+    def amounts(opt):
+        add_c, add_f = _clamp_add(opt, ctx.cash_ksh, ctx.float_ksh)
+        bank_c, bank_f = _clamp_sell(opt, ctx.cash_ksh, ctx.float_ksh)
+        return add_c, add_f, bank_c, bank_f
+
     restock = None
     a0 = int(plan.policy[0][space.index[c0, f0]])
     if a0 != 0:   # the plan says act this morning, using the real balances
-        add_c, add_f = _clamp_add(plan.menu[a0], ctx.cash_ksh, ctx.float_ksh)
-        restock = _restock(ctx.today, 0, add_c, add_f, 0.0, 1.0)
+        restock = _restock(ctx.today, 0, *amounts(plan.menu[a0]), 0.0, 1.0)
         if restock is not None:
             restock["p_plan_restocks_by_then"] = 1.0
     else:
@@ -126,20 +145,18 @@ def get_recommendation(ctx: ShopContext, horizon_days: int = 14) -> dict:
                 hit = i
                 break
         if hit is not None:
-            # Without an earlier restock, cash + float is conserved, so the free
-            # room is exact: capacity minus what the shop holds today.
-            add_c, add_f = _clamp_add(rows[hit]["top_option"], ctx.cash_ksh, ctx.float_ksh)
-            restock = _restock(ctx.today + timedelta(days=hit), hit, add_c, add_f,
+            restock = _restock(ctx.today + timedelta(days=hit), hit,
+                               *amounts(rows[hit]["top_option"]),
                                risk[hit - 1] if hit > 0 else 0.0, rows[hit]["p_restock"])
             if restock is not None:
-                # Approximate: a path could restock more than once, so this slightly
+                # Approximate: a path could act more than once, so this slightly
                 # overstates the chance. Present it as "likely by".
                 restock["p_plan_restocks_by_then"] = round(min(cum, 1.0), 4)
 
     return {
         "as_of": ctx.today.isoformat(),
         "balances": {"cash_ksh": ctx.cash_ksh, "float_ksh": ctx.float_ksh},
-        "restock": restock,   # None = no restock needed within the horizon
+        "restock": restock,   # None = nothing needed within the horizon
         "p_stockout_by_day_no_restock": [round(float(x), 4) for x in risk],
         "stockout_definition": STOCKOUT_DEFINITION,
         "expected_cost_ksh": int(round(plan.value(c0, f0))),

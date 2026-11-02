@@ -18,6 +18,9 @@ dependencies = [
   "openai",
   "python-multipart",
   "python-dotenv",
+  "supabase",
+  "bcrypt",
+  "python-jose",
 ]
 
 [project.optional-dependencies]
