@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import secrets
 import threading
 from contextlib import asynccontextmanager
 from datetime import date, datetime, timedelta, timezone
+from typing import Literal, Optional
 
 import httpx
 from dotenv import load_dotenv
@@ -18,7 +20,7 @@ from fastapi import (APIRouter, Depends, FastAPI, File, Form, HTTPException, Req
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from floatwise.ingest.sms_parser import TZ
 from floatwise.ingest.text_extract import extract_from_image, extract_from_narration  # noqa: F401
@@ -118,13 +120,32 @@ async def _upstream(_: Request, exc: httpx.HTTPError):
     return JSONResponse(status_code=502, content={"error": f"voice service failed: {exc}"})
 
 
+# ---- helpers ----
+def normalize_phone(raw: str) -> str:
+    """Turn 07xx / 01xx / 254xx / +254xx into the single form +254XXXXXXXXX."""
+    p = re.sub(r"[\s\-()]", "", raw)
+    if p.startswith("+254"):
+        p = p[1:]
+    elif p.startswith("0"):
+        p = "254" + p[1:]
+    if not re.fullmatch(r"254[17]\d{8}", p):
+        raise ValueError("Enter a valid Kenyan phone number")
+    return "+" + p
+
+
+def _db():
+    if supabase is None:
+        raise RuntimeError("Accounts are not configured: set SUPABASE_URL and SUPABASE_KEY")
+    return supabase
+
+
 # ---- authentication ----
 bearer = HTTPBearer(auto_error=False)
 
 
 def current_user(creds: HTTPAuthorizationCredentials | None = Depends(bearer)) -> str | None:
-    """Email from a valid token. A bad token is always rejected; a missing token is
-    rejected only when REQUIRE_AUTH=1."""
+    """Phone number from a valid token. A bad token is always rejected; a missing
+    token is rejected only when REQUIRE_AUTH=1."""
     if creds is None:
         if REQUIRE_AUTH:
             raise HTTPException(status_code=401, detail="Log in first")
@@ -135,22 +156,39 @@ def current_user(creds: HTTPAuthorizationCredentials | None = Depends(bearer)) -
         payload = jose_jwt.decode(creds.credentials, JWT_SECRET, algorithms=["HS256"])
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid or expired token") from None
-    return payload.get("email")
+    return payload.get("phone")
 
 
-def require_user(email: str | None = Depends(current_user)) -> str:
-    if not email:
+def require_user(phone: str | None = Depends(current_user)) -> str:
+    if not phone:
         raise HTTPException(status_code=401, detail="Log in first")
-    return email
-
-
-def _db():
-    if supabase is None:
-        raise RuntimeError("Accounts are not configured: set SUPABASE_URL and SUPABASE_KEY")
-    return supabase
+    return phone
 
 
 # ---- request bodies ----
+class SignupBody(BaseModel):
+    shop_name: str = Field(min_length=2, max_length=80)
+    phone: str
+    till_number: Optional[str] = Field(default=None, pattern=r"^\d{6,7}$")
+    password: str = Field(min_length=6, max_length=128)
+    language: Literal["en", "sw"] = "en"
+
+    @field_validator("phone")
+    @classmethod
+    def _phone(cls, v):
+        return normalize_phone(v)
+
+
+class LoginBody(BaseModel):
+    phone: str
+    password: str = Field(max_length=128)
+
+    @field_validator("phone")
+    @classmethod
+    def _phone(cls, v):
+        return normalize_phone(v)
+
+
 class ShopCreate(BaseModel):
     name: str
     language: str = "sw"
@@ -209,11 +247,6 @@ class SpeakIn(BaseModel):
     text: str = Field(min_length=1, max_length=800)
 
 
-class Credentials(BaseModel):
-    email: str = Field(min_length=3, max_length=254)
-    password: str = Field(min_length=8, max_length=128)
-
-
 class SavedChat(BaseModel):
     message: str = Field(min_length=1, max_length=4000)
 
@@ -268,24 +301,28 @@ def health():
 
 
 @app.post("/signup", status_code=201)
-def signup(body: Credentials):
+def signup(body: SignupBody):
     if bcrypt is None:
         raise RuntimeError("Signup is not available: bcrypt is not installed")
     db = _db()
-    email = body.email.strip().lower()
-    if db.table("users").select("email").eq("email", email).execute().data:
+    if db.table("users").select("phone").eq("phone", body.phone).execute().data:
         raise HTTPException(status_code=400, detail="User already exists")
     hashed = bcrypt.hashpw(body.password.encode(), bcrypt.gensalt()).decode()
-    db.table("users").insert({"email": email, "password": hashed}).execute()
+    db.table("users").insert({
+        "phone": body.phone,
+        "shop_name": body.shop_name.strip(),
+        "till_number": body.till_number,
+        "language": body.language,
+        "password": hashed,
+    }).execute()
     return {"message": "User created successfully"}
 
 
 @app.post("/login")
-def login(body: Credentials):
+def login(body: LoginBody):
     if bcrypt is None or jose_jwt is None:
         raise RuntimeError("Login is not available: bcrypt or python-jose is not installed")
-    email = body.email.strip().lower()
-    rows = _db().table("users").select("*").eq("email", email).execute().data
+    rows = _db().table("users").select("*").eq("phone", body.phone).execute().data
     ok = False
     if rows:
         try:
@@ -295,29 +332,33 @@ def login(body: Credentials):
     if not ok:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     exp = datetime.now(timezone.utc) + timedelta(hours=JWT_HOURS)
-    token = jose_jwt.encode({"email": email, "exp": exp}, JWT_SECRET, algorithm="HS256")
-    return {"access_token": token, "token_type": "bearer"}
+    token = jose_jwt.encode({"phone": body.phone, "exp": exp}, JWT_SECRET, algorithm="HS256")
+    user = rows[0]
+    return {"access_token": token, "token_type": "bearer",
+            "shop_name": user.get("shop_name"), "language": user.get("language") or "en"}
+
+@app.get("/api/shops/current")
+def get_current_shop(phone: str = Depends(require_user)):
+    """Fetch the shop associated with the logged-in user."""
+    with _store_lock:
+        shops = [s for s in store.shops.values() if s.owner_phone == phone]
+        if not shops:
+            raise HTTPException(status_code=404, detail="No shop found for the current user")
+        return _shop(shops[0])  # Return the first shop for the user  # Return the first shop for the user
 
 
 # ---- saved chats (only for the logged-in user, taken from the token) ----
+# The existing "user_email" column now stores the user's phone number.
 @app.post("/chats", status_code=201)
-def save_chat(body: SavedChat, email: str = Depends(require_user)):
-    _db().table("chats").insert({"user_email": email, "message": body.message}).execute()
+def save_chat(body: SavedChat, phone: str = Depends(require_user)):
+    _db().table("chats").insert({"user_email": phone, "message": body.message}).execute()
     return {"message": "Chat saved successfully"}
 
 
 @app.get("/chats")
-def get_chats(email: str = Depends(require_user)):
-    rows = _db().table("chats").select("*").eq("user_email", email).execute().data
+def get_chats(phone: str = Depends(require_user)):
+    rows = _db().table("chats").select("*").eq("user_email", phone).execute().data
     return {"chats": rows}
-
-
-@app.get("/chats/{user_email}")
-def get_chats_for(user_email: str, email: str = Depends(require_user)):
-    # Kept for older clients, but you can only read your own history.
-    if user_email.strip().lower() != email:
-        raise HTTPException(status_code=403, detail="You can only read your own chats")
-    return get_chats(email)
 
 
 # ---- shop endpoints: all behind current_user (enforced when REQUIRE_AUTH=1) ----
@@ -351,14 +392,10 @@ def list_transactions(shop_id: str, limit: int = 100):
 
 @api.post("/shops/{shop_id}/sms")
 def ingest_sms(shop_id: str, body: SmsIn):
-    def chat_fn_for(key: str):
-        # Define the function or import it from the correct module
-        return None  # Replace with actual implementation if needed
-
-    open_chat = chat_fn_for("fireworks")   # None without a key: the default chain is used
+    # chat_fn=None means the default LLM chain is used.
     with _store_lock:
         return _batch(store.ingest_sms(shop_id, body.text, use_llm=body.use_llm,
-                                       chat_fn=open_chat))
+                                       chat_fn=None))
 
 
 @api.get("/shops/{shop_id}/batches/{batch_id}")
@@ -471,6 +508,7 @@ def voice_chat(shop_id: str, audio: UploadFile = File(...), language: str | None
     with _model_lock:
         reply = agent.run(transcript)
     return {"transcript": transcript, **_chat_payload(reply, info)}
+
 
 @api.get("/shops/{shop_id}/replay")
 def replay(shop_id: str, days: int = 30):
