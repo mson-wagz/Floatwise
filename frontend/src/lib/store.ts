@@ -5,6 +5,42 @@ export type Transaction = components["schemas"]["Transaction"];
 export type Batch = components["schemas"]["Batch"];
 export type PeerShop = components["schemas"]["PeerShop"];
 
+export interface AuthUser {
+  id: string;
+  shopName: string;
+  phone: string;
+  tillNumber?: string;
+  preferredLanguage: "en" | "sw";
+  passwordHash: string;
+  createdAt: string;
+}
+
+export interface LockoutState {
+  attempts: number;
+  lockedUntil: number | null; // timestamp ms
+}
+
+const DEFAULT_USERS: AuthUser[] = [
+  {
+    id: "usr_mama_stacy",
+    shopName: "Mama Stacy M-Pesa & Grocery",
+    phone: "254712345678",
+    tillNumber: "892144",
+    preferredLanguage: "sw",
+    passwordHash: "stacy2026",
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "usr_brian",
+    shopName: "Mama Brian M-Pesa & Chemist",
+    phone: "254722889900",
+    tillNumber: "741258",
+    preferredLanguage: "en",
+    passwordHash: "brian2026",
+    createdAt: new Date().toISOString(),
+  },
+];
+
 export interface ChatEntry {
   id: string;
   timestamp: string;
@@ -138,9 +174,215 @@ const DEFAULT_STOCKOUTS: StockoutIncident[] = [
   },
 ];
 
+export function normalizeKenyanPhone(raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  if (digits.startsWith("0") && digits.length === 10) {
+    return "254" + digits.slice(1);
+  }
+  if (digits.startsWith("254") && digits.length === 12) {
+    return digits;
+  }
+  return digits;
+}
+
+export function formatKenyanPhoneDisplay(raw: string): string {
+  const norm = normalizeKenyanPhone(raw);
+  if (norm.length === 12 && norm.startsWith("254")) {
+    return `+254 ${norm.slice(3, 6)} ${norm.slice(6, 9)} ${norm.slice(9)}`;
+  }
+  return raw;
+}
+
+export function isValidKenyanPhone(raw: string): boolean {
+  if (!raw) return false;
+  const digits = raw.replace(/\D/g, "");
+  // 07XXXXXXXX or 01XXXXXXXX (10 digits)
+  if (digits.length === 10 && digits.startsWith("0") && (digits[1] === "7" || digits[1] === "1")) {
+    return true;
+  }
+  // 2547XXXXXXXX or 2541XXXXXXXX (12 digits)
+  if (digits.length === 12 && digits.startsWith("254") && (digits[3] === "7" || digits[3] === "1")) {
+    return true;
+  }
+  return false;
+}
+
 export class LocalStore {
   private static getKey(key: string): string {
     return `floatwise_${key}`;
+  }
+
+  // --- User Authentication & Session ---
+  public static getUsers(): AuthUser[] {
+    const raw = localStorage.getItem(this.getKey("users"));
+    if (!raw) {
+      localStorage.setItem(this.getKey("users"), JSON.stringify(DEFAULT_USERS));
+      return DEFAULT_USERS;
+    }
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return DEFAULT_USERS;
+    }
+  }
+
+  public static saveUsers(users: AuthUser[]): void {
+    localStorage.setItem(this.getKey("users"), JSON.stringify(users));
+  }
+
+  public static getCurrentUser(): AuthUser | null {
+    // Check session storage first (if remember me was false), then local storage
+    const sessionRaw = sessionStorage.getItem(this.getKey("current_user"));
+    if (sessionRaw) {
+      try { return JSON.parse(sessionRaw); } catch { /* ignore */ }
+    }
+    const localRaw = localStorage.getItem(this.getKey("current_user"));
+    if (localRaw) {
+      try { return JSON.parse(localRaw); } catch { return null; }
+    }
+    return null;
+  }
+
+  public static setCurrentUser(user: AuthUser | null, remember = true): void {
+    if (!user) {
+      localStorage.removeItem(this.getKey("current_user"));
+      sessionStorage.removeItem(this.getKey("current_user"));
+    } else {
+      const payload = JSON.stringify(user);
+      if (remember) {
+        localStorage.setItem(this.getKey("current_user"), payload);
+        sessionStorage.removeItem(this.getKey("current_user"));
+      } else {
+        sessionStorage.setItem(this.getKey("current_user"), payload);
+        localStorage.removeItem(this.getKey("current_user"));
+      }
+    }
+  }
+
+  public static getLockoutState(): LockoutState {
+    const raw = localStorage.getItem(this.getKey("lockout"));
+    if (!raw) return { attempts: 0, lockedUntil: null };
+    try {
+      const state: LockoutState = JSON.parse(raw);
+      if (state.lockedUntil && Date.now() > state.lockedUntil) {
+        // Lockout expired
+        return { attempts: 0, lockedUntil: null };
+      }
+      return state;
+    } catch {
+      return { attempts: 0, lockedUntil: null };
+    }
+  }
+
+  public static setLockoutState(state: LockoutState): void {
+    localStorage.setItem(this.getKey("lockout"), JSON.stringify(state));
+  }
+
+  public static getLockoutRemainingSeconds(): number {
+    const state = this.getLockoutState();
+    if (state.lockedUntil && state.lockedUntil > Date.now()) {
+      return Math.ceil((state.lockedUntil - Date.now()) / 1000);
+    }
+    return 0;
+  }
+
+  public static register(data: {
+    shopName: string;
+    phone: string;
+    tillNumber?: string;
+    password: string;
+    preferredLanguage: "en" | "sw";
+  }): { success: boolean; user?: AuthUser; error?: string } {
+    const normPhone = normalizeKenyanPhone(data.phone);
+    const users = this.getUsers();
+
+    // Check if phone already registered
+    const exists = users.some((u) => u.phone === normPhone);
+    if (exists) {
+      return {
+        success: false,
+        error: "An account with this phone number already exists. Try logging in.",
+      };
+    }
+
+    const newUser: AuthUser = {
+      id: `usr_${Date.now()}`,
+      shopName: data.shopName.trim(),
+      phone: normPhone,
+      tillNumber: data.tillNumber?.trim() || undefined,
+      preferredLanguage: data.preferredLanguage,
+      passwordHash: data.password,
+      createdAt: new Date().toISOString(),
+    };
+
+    users.push(newUser);
+    this.saveUsers(users);
+
+    // Sync shop profile
+    const shop = this.getShop();
+    shop.name = newUser.shopName;
+    shop.language = newUser.preferredLanguage;
+    this.saveShop(shop);
+
+    this.setCurrentUser(newUser, true);
+    return { success: true, user: newUser };
+  }
+
+  public static login(
+    phone: string,
+    password: string,
+    remember = true
+  ): { success: boolean; user?: AuthUser; error?: string; remainingSeconds?: number } {
+    // 1. Check lockout
+    const remaining = this.getLockoutRemainingSeconds();
+    if (remaining > 0) {
+      return {
+        success: false,
+        error: "Too many incorrect attempts. Please wait 1 minute before trying again.",
+        remainingSeconds: remaining,
+      };
+    }
+
+    const normPhone = normalizeKenyanPhone(phone);
+    const users = this.getUsers();
+    const user = users.find((u) => u.phone === normPhone && u.passwordHash === password);
+
+    if (!user) {
+      // Record failed attempt
+      const state = this.getLockoutState();
+      const newAttempts = state.attempts + 1;
+      if (newAttempts >= 3) {
+        const lockedUntil = Date.now() + 60 * 1000; // 60 seconds lockout
+        this.setLockoutState({ attempts: newAttempts, lockedUntil });
+        return {
+          success: false,
+          error: "Too many incorrect attempts. Please wait 1 minute before trying again.",
+          remainingSeconds: 60,
+        };
+      } else {
+        this.setLockoutState({ attempts: newAttempts, lockedUntil: null });
+        return {
+          success: false,
+          error: "Incorrect phone number or password. Please try again.",
+        };
+      }
+    }
+
+    // Success: clear lockout
+    this.setLockoutState({ attempts: 0, lockedUntil: null });
+
+    // Sync active shop profile
+    const shop = this.getShop();
+    shop.name = user.shopName;
+    shop.language = user.preferredLanguage;
+    this.saveShop(shop);
+
+    this.setCurrentUser(user, remember);
+    return { success: true, user };
+  }
+
+  public static logout(): void {
+    this.setCurrentUser(null, false);
   }
 
   public static getShop(): Shop {
