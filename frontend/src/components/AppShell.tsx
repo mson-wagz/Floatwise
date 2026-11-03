@@ -8,10 +8,17 @@ import { ksh } from "../lib/format";
 export default function AppShell() {
   const { t } = useTranslation();
   const [shop, setShop] = useState(LocalStore.getShop());
+  const [currentUser, setCurrentUser] = useState(LocalStore.getCurrentUser());
   const [showBalanceModal, setShowBalanceModal] = useState(false);
   const [editCash, setEditCash] = useState(shop.cash_ksh);
   const [editFloat, setEditFloat] = useState(shop.float_ksh);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+  const handleLogout = () => {
+    LocalStore.logout();
+    setCurrentUser(null);
+    setShop(LocalStore.getShop());
+  };
 
   const saveBalances = (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,6 +116,35 @@ export default function AppShell() {
 
             {/* Language Switcher */}
             <LanguageToggle />
+
+            {/* User Account / Auth Link */}
+            {currentUser ? (
+              <div className="flex items-center gap-2 pl-1 border-l border-slate-200 dark:border-slate-700">
+                <div className="hidden xl:flex flex-col text-right text-xs">
+                  <span className="font-bold text-slate-800 dark:text-slate-200 truncate max-w-[130px]">
+                    {currentUser.shopName}
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-mono">
+                    0{currentUser.phone.slice(3)}
+                  </span>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40 dark:hover:text-rose-300 text-xs text-slate-600 dark:text-slate-400 font-medium transition-colors"
+                  title="Sign out of current shop"
+                >
+                  Log out
+                </button>
+              </div>
+            ) : (
+              <Link
+                to="/login"
+                className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-2xs transition-colors flex items-center gap-1.5"
+              >
+                <span>👤</span>
+                <span>Log In</span>
+              </Link>
+            )}
           </div>
         </div>
 
