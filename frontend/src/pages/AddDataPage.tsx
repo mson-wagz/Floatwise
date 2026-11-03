@@ -80,7 +80,20 @@ export default function AddDataPage() {
           setSuccessMessage(`✓ Saved ${saved} transaction${saved === 1 ? "" : "s"}. Balances updated.`);
           setTimeout(() => setSuccessMessage(null), 6000);
         },
-        onError: showError,
+        onError: (error: Error) => {
+          if (error.message.toLowerCase().includes("already confirmed")) {
+            setBatch(null);
+            setSmsText("");
+        
+            setSuccessMessage(
+              "This batch was already confirmed. Your review has been closed."
+            );
+        
+            return;
+          }
+        
+          showError(error);
+        },
       }
     );
   };

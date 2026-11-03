@@ -5,7 +5,7 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
-    proxy: { "/api": "http://localhost:8000" },
+    proxy: { "/api": "https://abigailwagura1--floatwise-web.us-east.modal.run" },
   },
   test: { environment: "jsdom", setupFiles: "./src/test/setup.ts" },
 });

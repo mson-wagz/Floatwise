@@ -23,6 +23,21 @@ SENT = re.compile(_HEAD + _AMT + r"\s+sent to\s+" + _WHO + _TAIL, re.S)
 # Agent RECEIVED float from a customer -> customer withdrawal (cash out, float in).
 RECEIVED = re.compile(_HEAD + r"You have received\s+" + _AMT + r"\s+from\s+" + _WHO + _TAIL, re.S)
 _SPLIT = re.compile(r"(?=\b[A-Z0-9]{10}\s+Confirmed\.)")
+# Agent gives cash to customer.
+# Customer receives cash, agent receives M-Pesa float.
+GIVE_CASH = re.compile(
+    _HEAD
+    + r"on\s+"
+    + r"(?P<date>\d{1,2}/\d{1,2}/\d{2,4})\s+"
+    + r"at\s+"
+    + r"(?P<time>\d{1,2}:\d{2}\s?[AaPp][Mm])\.?\s+"
+    + r"Give\s+"
+    + _AMT
+    + r"\s+cash to\s+"
+    + _WHO
+    + _TAIL,
+    re.S | re.I,
+)
 
 
 @dataclass
@@ -46,20 +61,40 @@ def _parse_ts(date_s: str, time_s: str) -> datetime:
 
 
 def _parse_one(chunk: str, salt: str):
-    for pattern, kind in ((SENT, TxnType.deposit), (RECEIVED, TxnType.withdrawal)):
+    patterns = (
+        (SENT, TxnType.deposit),
+        (RECEIVED, TxnType.withdrawal),
+        (GIVE_CASH, TxnType.withdrawal),
+    )
+
+    for pattern, kind in patterns:
         m = pattern.search(chunk)
+
         if not m:
             continue
+
         amount = int(round(_ksh(m["amount"])))
         dc, df = apply_deltas(kind, amount)
+
         txn = Transaction(
-            id=f"sms_{m['code']}", timestamp=_parse_ts(m["date"], m["time"]), type=kind,
-            amount_ksh=amount, commission_ksh=0, cash_delta_ksh=dc, float_delta_ksh=df,
-            counterparty_hash=hash_phone(m["phone"], salt), source=Source.sms,
-            confidence=0.95, needs_review=amount >= REVIEW_ABOVE_KSH)
+            id=f"sms_{m['code']}",
+            timestamp=_parse_ts(m["date"], m["time"]),
+            type=kind,
+            amount_ksh=amount,
+            commission_ksh=0,
+            cash_delta_ksh=dc,
+            float_delta_ksh=df,
+            counterparty_hash=hash_phone(m["phone"], salt),
+            source=Source.sms,
+            confidence=0.95,
+            needs_review=amount >= REVIEW_ABOVE_KSH,
+        )
+
         balance = int(round(_ksh(m["balance"])))
         cost = int(round(_ksh(m["cost"]))) if m["cost"] else 0
+
         return txn, balance, cost
+
     return None
 
 

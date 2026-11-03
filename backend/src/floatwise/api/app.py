@@ -337,15 +337,32 @@ def login(body: LoginBody):
     return {"access_token": token, "token_type": "bearer",
             "shop_name": user.get("shop_name"), "language": user.get("language") or "en"}
 
-@app.get("/api/shops/current")
-def get_current_shop(phone: str = Depends(require_user)):
-    """Fetch the shop associated with the logged-in user."""
-    with _store_lock:
-        shops = [s for s in store.shops.values() if s.owner_phone == phone]
-        if not shops:
-            raise HTTPException(status_code=404, detail="No shop found for the current user")
-        return _shop(shops[0])  # Return the first shop for the user  # Return the first shop for the user
+_user_shops: dict[str, str] = {}   # phone -> shop_id (in memory)
 
+
+@app.get("/api/shops/current")
+def get_current_shop(phone: str | None = Depends(current_user)):
+    """The logged-in user's shop. Creates it on first use from their signup details."""
+    key = phone or "demo"          # "demo" only happens when REQUIRE_AUTH=0
+    with _store_lock:
+        shop_id = _user_shops.get(key)
+        if shop_id:
+            try:
+                return _shop(store.get(shop_id))
+            except KeyError:
+                pass               # the store was reset; make a new shop below
+
+        name, language = "My shop", "sw"
+        if phone and supabase is not None:
+            rows = (supabase.table("users").select("shop_name,language")
+                    .eq("phone", phone).execute().data)
+            if rows:
+                name = rows[0].get("shop_name") or name
+                language = rows[0].get("language") or language
+
+        shop = store.create_shop(**ShopCreate(name=name, language=language).model_dump())
+        _user_shops[key] = shop.shop_id
+        return _shop(shop)
 
 # ---- saved chats (only for the logged-in user, taken from the token) ----
 # The existing "user_email" column now stores the user's phone number.
