@@ -1,24 +1,70 @@
-import { useState } from "react";
+import React from "react";
+import { useState, useEffect } from "react";
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import LanguageToggle from "./LanguageToggle";
-import { LocalStore } from "../lib/store";
+import { Store, type Shop } from "../lib/store";
 import { ksh } from "../lib/format";
 
 export default function AppShell() {
   const { t } = useTranslation();
-  const [shop, setShop] = useState(LocalStore.getShop());
+  const [shop, setShop] = useState<Shop | null>(null);
   const [showBalanceModal, setShowBalanceModal] = useState(false);
-  const [editCash, setEditCash] = useState(shop.cash_ksh);
-  const [editFloat, setEditFloat] = useState(shop.float_ksh);
+  const [editCash, setEditCash] = useState(0);
+  const [editFloat, setEditFloat] = useState(0);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const saveBalances = (e: React.FormEvent) => {
+  // Fetch shop data dynamically from the backend
+  useEffect(() => {
+    const fetchShopData = async () => {
+      try {
+        setLoading(true);
+        const shopData = await Store.fetchShop();
+        setShop(shopData);
+      } catch (err) {
+        setError((err as Error).message || "Failed to fetch shop data");
+      } finally {
+        setLoading(false);
+      }
+    };
+  
+    fetchShopData();
+  }, []);
+  
+  if (loading) {
+    return <p className="text-sm text-slate-500">Loading shop data...</p>;
+  }
+  
+  if (error) {
+    return <p className="text-sm text-rose-600">Error: {error}</p>;
+  }
+
+  const saveBalances = async (e: React.FormEvent) => {
     e.preventDefault();
-    const updated = LocalStore.updateBalances(editCash, editFloat);
-    setShop(updated);
-    setShowBalanceModal(false);
+    if (!shop) return;
+
+    try {
+      const updatedShop = await Store.updateBalances(editCash, editFloat); // Update balances via backend
+      setShop(updatedShop);
+      setShowBalanceModal(false);
+    } catch (err) {
+      console.error("Failed to update balances:", err);
+    }
   };
+
+  if (loading) {
+    return <p className="text-sm text-slate-500">Loading shop data...</p>;
+  }
+
+  if (error) {
+    return <p className="text-sm text-rose-600">Error: {error}</p>;
+  }
+
+  if (!shop) {
+    return <p className="text-sm text-rose-600">No shop data available.</p>;
+  }
 
   const navItems = [
     { to: "/", label: t("nav.advisor"), icon: "💬" },

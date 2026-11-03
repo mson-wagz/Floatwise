@@ -25,7 +25,7 @@ const toCard = (r: Rec, lang: "sw" | "en") => ({
 });
 
 export default function WhatIfPage() {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const lang = (i18n.language?.startsWith("sw") ? "sw" : "en") as "sw" | "en";
 
   // Default scenario state
@@ -54,8 +54,6 @@ export default function WhatIfPage() {
   const riskPts = delta ? Math.round(delta.p_stockout_at_horizon_no_restock * 100) : null;
   const costDelta = delta?.expected_cost_ksh ?? null;
   const amtDelta = base && scen ? restockTotal(scen) - restockTotal(base) : null;
-
-  const t = (key: string) => i18n.t(key);
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
