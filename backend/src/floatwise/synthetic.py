@@ -15,6 +15,7 @@ TZ = ZoneInfo("Africa/Nairobi")
 HOURS = np.arange(7, 21)  # shop open 07:00 to 20:59
 HOUR_WEIGHTS = np.array([2, 4, 5, 5, 6, 8, 8, 6, 5, 5, 6, 7, 5, 3], dtype=float)
 HOUR_WEIGHTS /= HOUR_WEIGHTS.sum()
+SWEEP_ABOVE = 1.1   # excess above this multiple of the target is paid into the bank
 
 DOW_MULT = {"monday": 0.9, "tuesday": 0.9, "wednesday": 0.95, "thursday": 1.0,
             "friday": 1.2, "saturday": 1.1, "sunday": 0.8}
@@ -96,6 +97,24 @@ def generate(profile: SynthProfile, start: date, days: int, seed: int = 42) -> S
                 if amt > 0:
                     add(morning, TxnType.float_purchase, amt, None)
                     flt += amt
+
+                    # Excess balances are paid into the agent's bank account, not left in the till.
+        if flt > SWEEP_ABOVE * profile.float_target:
+            amt = int(round((flt - profile.float_target) / 1000) * 1000)
+            if amt > 0:
+                txns.append(Transaction(
+                    id=f"txn_{len(txns):06d}", timestamp=morning, type=TxnType.other,
+                    amount_ksh=amt, commission_ksh=0, cash_delta_ksh=0,
+                    float_delta_ksh=-amt, source=Source.synthetic))
+                flt -= amt
+        if cash > SWEEP_ABOVE * profile.cash_target:
+            amt = int(round((cash - profile.cash_target) / 1000) * 1000)
+            if amt > 0:
+                txns.append(Transaction(
+                    id=f"txn_{len(txns):06d}", timestamp=morning, type=TxnType.other,
+                    amount_ksh=amt, commission_ksh=0, cash_delta_ksh=-amt,
+                    float_delta_ksh=0, source=Source.synthetic))
+                cash -= amt
 
         n_w = rng.poisson(profile.base_withdrawals * w_mult)
         n_d = rng.poisson(profile.base_deposits * d_mult)

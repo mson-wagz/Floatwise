@@ -200,7 +200,7 @@ class ShopStore:
             info["note"] = ("Default assumptions: not enough history yet "
                             "(needs 30+ customers over at least a week).")
         return ShopContext(demand=demand, cash_ksh=shop.cash_ksh, float_ksh=shop.float_ksh,
-                           today=today), info
+                           today=today, transactions=list(shop.transactions)), info
 
     def add_batch(self, shop_id: str, source: str, txns: list,
                   unparsed: list | None = None, warnings: list | None = None) -> Batch:

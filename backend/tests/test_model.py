@@ -96,3 +96,9 @@ def test_simulator_matches_exact_end_of_day_cash(setup):
     x = res.cash_end[0].astype(float)
     se = x.std(ddof=1) / np.sqrt(x.size)
     assert abs(x.mean() - exact_mean) < 4 * se
+
+
+def test_negative_amounts_sell_down_to_zero():
+    nc, nf = apply_restock(np.array([10]), np.array([30]),
+                           np.array([-4]), np.array([-50]), cap=80)
+    assert nc[0] == 6 and nf[0] == 0

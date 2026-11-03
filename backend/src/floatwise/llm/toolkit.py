@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from floatwise.model import tools as T
 from floatwise.model.demand import DAY_NAMES
+from floatwise.model.replay import replay_month
 
 
 def clamp_int(value, lo: int, hi: int, default: int | None = None) -> int:
@@ -51,6 +52,16 @@ TOOL_SPECS = [
                 "required": ["date", "multiplier"]}},
             "horizon_days": {"type": "integer", "minimum": 1, "maximum": 14}},
             "required": []}}},
+
+        {"type": "function", "function": {
+        "name": "replay_month",
+        "description": ("Replay the shop's last weeks and estimate what running out of cash or "
+                        "float cost, compared with following the optimal restocking plan. Use "
+                        "for questions about past losses or how much money was missed."),
+        "parameters": {"type": "object", "properties": {
+            "days": {"type": "integer", "minimum": 7, "maximum": 45,
+                     "description": "How many past days to replay (default 30)."}},
+            "required": []}}},
 ]
 
 
@@ -67,5 +78,8 @@ def default_tools() -> dict:
             demand_multiplier = max(0.2, min(5.0, float(demand_multiplier)))
         return T.run_whatif(ctx, market_day=market_day, demand_multiplier=demand_multiplier,
                             events=events, horizon_days=clamp_int(horizon_days, 1, 14, 10))
+    
+    def rp(ctx, days=None):
+        return replay_month(ctx, clamp_int(days, 7, 45, 30))
 
     return {"get_recommendation": rec, "get_forecast": fc, "run_whatif": wi}

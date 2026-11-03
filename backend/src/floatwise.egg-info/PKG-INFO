@@ -13,6 +13,9 @@ Requires-Dist: httpx
 Requires-Dist: openai
 Requires-Dist: python-multipart
 Requires-Dist: python-dotenv
+Requires-Dist: supabase
+Requires-Dist: bcrypt
+Requires-Dist: python-jose
 Provides-Extra: dev
 Requires-Dist: pytest; extra == "dev"
 Requires-Dist: ruff; extra == "dev"

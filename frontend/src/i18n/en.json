@@ -1,0 +1,120 @@
+{
+  "app_title": "FloatWise",
+  "app_tagline": "Stop running out of cash or M-Pesa float",
+  "nav": {
+    "advisor": "Advisor",
+    "add_data": "Add Data",
+    "forecast": "Forecast",
+    "what_if": "What If?",
+    "replay": "Stockout Cost",
+    "float_swap": "Float Swap"
+  },
+  "balances": {
+    "cash_drawer": "Cash in Drawer",
+    "phone_float": "M-Pesa on Phone",
+    "total_capital": "Total Float Capital",
+    "update_balances": "Update Balances",
+    "save": "Save Balances"
+  },
+  "privacy": {
+    "badge": "Privacy Shield Active",
+    "tooltip": "Customer names and phone numbers are redacted locally before any analysis."
+  },
+  "advisor": {
+    "input_placeholder": "Ask in Swahili or English (e.g. 'what if school fees are on Thursday?')...",
+    "send": "Ask",
+    "listen": "Listen Aloud",
+    "speaking": "Reading...",
+    "stop": "Stop Audio",
+    "verified_badge": "Calculated by simulation. Zero numbers invented.",
+    "quick_chips": [
+      "What if school fees are on Thursday?",
+      "How much cash do I need for Saturday market?",
+      "What is my stockout risk this week?",
+      "Why is float running out faster than cash?"
+    ]
+  },
+  "ingest": {
+    "title": "Ingest Daily Activity",
+    "subtitle": "Speak a voice note, paste M-Pesa SMS, or photograph your notebook ledger.",
+    "tab_voice": "Voice Note",
+    "tab_sms": "Paste M-Pesa SMS",
+    "tab_ledger": "Photo Notebook",
+    "voice_record_prompt": "Tap to speak in Swahili or English",
+    "voice_recording": "Listening to your voice note...",
+    "stop_recording": "Done Speaking",
+    "sms_placeholder": "Paste raw Safaricom M-Pesa SMS messages here...",
+    "parse_button": "Analyze & Review Transactions",
+    "review_title": "Human-in-the-Loop Review",
+    "review_subtitle": "Nothing is saved until you look it over and confirm.",
+    "confirm_button": "Approve & Update Drawer",
+    "reject_button": "Discard Batch",
+    "sample_voice": "Try Sample Voice Note",
+    "sample_sms": "Insert Sample M-Pesa SMS"
+  },
+  "what_if": {
+    "title": "What If Scenario Simulator",
+    "subtitle": "Test how school fee weeks, paydays, or market days impact your float.",
+    "market_day_label": "Market Day",
+    "demand_slider": "Customer Demand Multiplier",
+    "event_label": "Special Event Spike",
+    "calculate": "Re-calculate Simulation",
+    "baseline": "Current Baseline",
+    "scenario": "Simulated Scenario",
+    "impact": "Impact Summary"
+  },
+  "replay": {
+    "title": "Last Month Stockout Analysis",
+    "subtitle": "What running out of cash or float cost your shop in lost shillings.",
+    "lost_commissions": "Lost Commissions",
+    "missed_volume": "Missed Transaction Volume",
+    "turned_away_customers": "Turned Away Customers",
+    "breakdown_title": "Stockout Incidents Log"
+  },
+  "swap": {
+    "title": "FloatSwap: Peer-to-Peer Balance Sharing",
+    "subtitle": "Swap cash and e-float with verified nearby shops without going to the bank.",
+    "propose_swap": "Propose Swap",
+    "surplus_cash": "Has Excess Cash (Needs Float)",
+    "surplus_float": "Has Excess Float (Needs Cash)",
+    "balanced": "Balanced"
+  },
+  "auth": {
+    "tagline": "FloatWise — Never run out of float or cash.",
+    "login_tab": "Log In",
+    "signup_tab": "Create Account",
+    "login_heading": "Welcome back, Agent",
+    "login_subheading": "Sign in to check today's restock advice and protect your drawer.",
+    "signup_heading": "Create Shopkeeper Account",
+    "signup_subheading": "Join thousands of Nairobi M-Pesa agents keeping their till and float balanced.",
+    "shop_name_label": "Shop / Agent Name",
+    "shop_name_placeholder": "e.g., Mama Wanjiku Shop",
+    "phone_label": "Phone Number",
+    "phone_placeholder": "e.g., 0712 345 678 or +254...",
+    "till_label": "M-Pesa Till / Agent Number (Optional)",
+    "till_placeholder": "e.g., 892144 or 7-digit Till",
+    "till_helper": "Optional: Helps match your Safaricom agent float SIM messages",
+    "password_label": "Password",
+    "password_placeholder": "At least 6 characters",
+    "confirm_password_label": "Confirm Password",
+    "confirm_password_placeholder": "Re-enter your password",
+    "preferred_lang_label": "Preferred Language / Lugha",
+    "remember_me": "Remember me on this device",
+    "remember_helper": "Keeps your shop signed in even without an internet connection",
+    "forgot_password": "Forgot password?",
+    "login_btn": "Log In / Ingia",
+    "logging_in": "Logging in...",
+    "signup_btn": "Create Account / Sajili",
+    "creating_account": "Creating account...",
+    "errors": {
+      "required": "This field is required.",
+      "invalid_phone": "Please enter a valid Kenyan phone number (e.g., 0712345678 or +254...)",
+      "weak_password": "Password must be at least 6 characters.",
+      "password_mismatch": "Passwords do not match.",
+      "invalid_credentials": "Incorrect phone number or password. Please try again.",
+      "existing_account": "An account with this phone number already exists. Try logging in.",
+      "offline_warning": "You are currently offline. FloatWise will log you in using stored offline credentials if available, or try again when connected.",
+      "too_many_attempts": "Too many incorrect attempts. Please wait 1 minute before trying again."
+    }
+  }
+}
