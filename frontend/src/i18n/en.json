@@ -78,5 +78,43 @@
     "surplus_cash": "Has Excess Cash (Needs Float)",
     "surplus_float": "Has Excess Float (Needs Cash)",
     "balanced": "Balanced"
+  },
+  "auth": {
+    "tagline": "FloatWise — Never run out of float or cash.",
+    "login_tab": "Log In",
+    "signup_tab": "Create Account",
+    "login_heading": "Welcome back, Agent",
+    "login_subheading": "Sign in to check today's restock advice and protect your drawer.",
+    "signup_heading": "Create Shopkeeper Account",
+    "signup_subheading": "Join thousands of Nairobi M-Pesa agents keeping their till and float balanced.",
+    "shop_name_label": "Shop / Agent Name",
+    "shop_name_placeholder": "e.g., Mama Wanjiku Shop",
+    "phone_label": "Phone Number",
+    "phone_placeholder": "e.g., 0712 345 678 or +254...",
+    "till_label": "M-Pesa Till / Agent Number (Optional)",
+    "till_placeholder": "e.g., 892144 or 7-digit Till",
+    "till_helper": "Optional: Helps match your Safaricom agent float SIM messages",
+    "password_label": "Password",
+    "password_placeholder": "At least 6 characters",
+    "confirm_password_label": "Confirm Password",
+    "confirm_password_placeholder": "Re-enter your password",
+    "preferred_lang_label": "Preferred Language / Lugha",
+    "remember_me": "Remember me on this device",
+    "remember_helper": "Keeps your shop signed in even without an internet connection",
+    "forgot_password": "Forgot password?",
+    "login_btn": "Log In / Ingia",
+    "logging_in": "Logging in...",
+    "signup_btn": "Create Account / Sajili",
+    "creating_account": "Creating account...",
+    "errors": {
+      "required": "This field is required.",
+      "invalid_phone": "Please enter a valid Kenyan phone number (e.g., 0712345678 or +254...)",
+      "weak_password": "Password must be at least 6 characters.",
+      "password_mismatch": "Passwords do not match.",
+      "invalid_credentials": "Incorrect phone number or password. Please try again.",
+      "existing_account": "An account with this phone number already exists. Try logging in.",
+      "offline_warning": "You are currently offline. FloatWise will log you in using stored offline credentials if available, or try again when connected.",
+      "too_many_attempts": "Too many incorrect attempts. Please wait 1 minute before trying again."
+    }
   }
 }

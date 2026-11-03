@@ -78,5 +78,43 @@
     "surplus_cash": "Ana Pesa Taslimu Ziada (Anahitaji Float)",
     "surplus_float": "Ana Float ya Simu Ziada (Anahitaji Pesa)",
     "balanced": "Yuko Sawa"
+  },
+  "auth": {
+    "tagline": "FloatWise — Usiwahi kuishiwa na float au pesa taslimu.",
+    "login_tab": "Ingia",
+    "signup_tab": "Sajili Akaunti",
+    "login_heading": "Karibu tena, Wakala",
+    "login_subheading": "Ingia uangalie ushauri wa leo wa kuongeza float na kulinda droo yako.",
+    "signup_heading": "Fungua Akaunti ya Duka",
+    "signup_subheading": "Jiunge na maelfu ya mawakala wa M-Pesa Nairobi wanaolinda mtaji wao.",
+    "shop_name_label": "Jina la Duka / Wakala",
+    "shop_name_placeholder": "mfano: Mama Wanjiku Shop",
+    "phone_label": "Nambari ya Simu",
+    "phone_placeholder": "mfano: 0712 345 678 au +254...",
+    "till_label": "Nambari ya Till / Wakala (Si Lazima)",
+    "till_placeholder": "mfano: 892144 au tarakimu 6-7",
+    "till_helper": "Si lazima: Inasaidia kulinganisha ujumbe wa SIM yako ya wakala",
+    "password_label": "Nenosiri",
+    "password_placeholder": "Herufi zisizopungua 6",
+    "confirm_password_label": "Thibitisha Nenosiri",
+    "confirm_password_placeholder": "Andika nenosiri tena",
+    "preferred_lang_label": "Lugha Unayopendelea",
+    "remember_me": "Nikumbuke kwenye kifaa hiki",
+    "remember_helper": "Huacha duka lako likiwa limeingia hata bila mtandao wa intaneti",
+    "forgot_password": "Umesahau nenosiri?",
+    "login_btn": "Ingia / Log In",
+    "logging_in": "Inaingia...",
+    "signup_btn": "Sajili / Create Account",
+    "creating_account": "Inatengeneza akaunti...",
+    "errors": {
+      "required": "Sehemu hii inahitajika.",
+      "invalid_phone": "Tafadhali weka nambari halali ya simu ya Kenya (mfano: 0712345678 au +254...)",
+      "weak_password": "Nenosiri lazima liwe na angalau herufi 6.",
+      "password_mismatch": "Nenosiri hazilingani.",
+      "invalid_credentials": "Nambari ya simu au nenosiri si sahihi. Tafadhali jaribu tena.",
+      "existing_account": "Akaunti yenye nambari hii ya simu tayari ipo. Jaribu kuingia.",
+      "offline_warning": "Hauna mtandao kwa sasa. FloatWise itakuingiza kwa taarifa zilizohifadhiwa kifaani au jaribu tena ukiunganishwa.",
+      "too_many_attempts": "Majaribio yasiyo sahihi yamezidi. Tafadhali subiri dakika 1 kabla ya kujaribu tena."
+    }
   }
 }
